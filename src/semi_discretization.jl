@@ -5,7 +5,7 @@ Struct containing everything about the spatial discretization, and the cache
 used throughout the simulation.
 """
 ## Add Poisson Solver
-struct SemiDiscretization{Grid, Equations, SurfaceFlux, IC, BC,
+struct SemiDiscretization{Grid, Equations <: AbstractEquations, SurfaceFlux, IC, BC,
                                     Solver, Cache}
     grid::Grid
     equations::Equations
@@ -33,12 +33,6 @@ function SemiDiscretization(grid, equations, surface_flux, initial_condition;
 end
 
 
-struct var2D{ArrayType1}
-    u::ArrayType1
-    w::ArrayType1
-    p::ArrayType1
-end
-
 """
     create_cache(problem, grid)
 
@@ -49,43 +43,37 @@ function create_cache(equations, grid::CartesianGrid2D, initial_condition)
     (; xc, nx, nz, nbx, nbz) = grid
     RealT = eltype(xc)
 
+    nvar = nvariables(equations)
+
     # Allocating variables
-    u_ = zeros(RealT, nx + 2*nbx, nz + 2*nbz)
-    u = OffsetArray(u_, OffsetArrays.Origin(1-nbx, 1-nbz))
+    # Conserved Variables
+    u_ = zeros(RealT, nvar, nx + 2*nbx, nz + 2*nbz)
+    u = OffsetArray(u_, OffsetArrays.Origin(1, 1-nbx, 1-nbz))
 
-    w_ = zeros(RealT, nx + 2*nbx, nz + 2*nbz)
-    w = OffsetArray(w_, OffsetArrays.Origin(1-nbx, 1-nbz))
-    
-    p_ = zeros(RealT, nx + 2*nbx, nz + 2*nbz)
-    p = OffsetArray(p_, OffsetArrays.Origin(1-nbx, 1-nbz))
+    # RHS Variables
+    du_ = zeros(RealT, nvar, nx + 2*nbx, nz + 2*nbz)
+    du = OffsetArray(du_, OffsetArrays.Origin(1, 1-nbx, 1-nbz))
 
-    var = var2D(u, w, p)
+    div_ = zeros(RealT, nx + 2*nbx, nz + 2*nbz)
+    div = OffsetArray(div_, OffsetArrays.Origin(1-nbx, 1-nbz))
 
-    ## 2 because we are in 2D
-    dMom_ = zeros(RealT, nx + 2*nbx, nz + 2*nbz, 2)
-    dMom = OffsetArray(dMom_, OffsetArrays.Origin(1-nbx, 1-nbz, 0))
+    orientations = 2
+    fu_ = zeros(RealT, nvar, nx + 2*nbx, nz + 2*nbz, orientations)
+    fu = OffsetArray(fu_, OffsetArrays.Origin(1, 1-nbx, 1-nbz, 1))
+    initialize_variables!(u, grid, initial_condition, equations)
 
-    dp_ = zeros(RealT, nx + 2*nbx, nz + 2*nbz)
-    dp = OffsetArray(dp_, OffsetArrays.Origin(1-nbx, 1-nbz))
-
-    ## Default 2D Taylor Green Vortex
-    initialize_flow!(var, grid, initial_condition)
-
-    cache = (; var, dMom, dp)
+    cache = (; u, du, fu, div)
 
     return cache
 end
 
-
-function initialize_flow!(var, grid, initial_condition)
+function initialize_variables!(u, grid::CartesianGrid2D, initial_condition, equations)
 
     (; xc, zc, xf, zf, nx, nz) = grid
 
-    for i = 1:nx+1
-        for k = 1:nz+1
-            var.u[i,k] = -sinpi(xf[i]) * cospi(zc[k])
-            var.w[i,k] =  cospi(xc[i]) * sinpi(zf[k])
-            var.p[i,k] = 0.25f0*(cospi(2*xf[i])+sinpi(2*zf[k]))
+    for i = 1:nx
+        for k = 1:nz
+           u[:, i, k] = initial_condition((xc[i], zc[k]), (xf[i], zf[k]), 0.0, equations)
         end
     end
 

@@ -26,6 +26,10 @@ function mesh(domain::Tuple{<:Real, <:Real, <:Real, <:Real}, nx, nz; nbx = 1, nb
     dx = (xmax - xmin)/nx
     dz = (zmax - zmin)/nz
 
+    ## The names are wrong:
+    # For Harlow-Welch or C-Grid Arakawa the nodes are where the pressure is stored
+    # while the center cells are the center of the cells defined by the pressure nodes
+    # the velocities instead are staggered.
     # Nbx and Nbz are the number of ghost cells in the x and z direction
     # For Nbx = 0 and Nbz = 0 this is broken!!
     ## Creating the cell centers

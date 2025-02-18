@@ -1,3 +1,5 @@
+using Trixi: AbstractEquations
+
 """
     AbstractSpatialSolver
 
