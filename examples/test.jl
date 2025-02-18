@@ -19,9 +19,9 @@ grid = IncompressibleNavierStokes.mesh(domain, nx, nz)
 surface_flux = flux_test
 semi = SemiDiscretization(grid, equations, flux_test, initial_conditoin_tgv)
 
-dt =  6.896551724137932e-04
+dt =  6e-4
 
-tspan = (0.0, 12.0)
+tspan = (0.0, 12)
 
 ode = ODE(semi, tspan)
 

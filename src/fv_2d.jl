@@ -108,10 +108,10 @@ function compute_div!(semi)
 end
 
 function compute_pressure!(semi)
-    tol = 1e-8
+    tol = 1e-13
     normres = 1
     om = 1.6
-    (; cache, grid) = semi
+    (; cache, grid, boundary_conditions) = semi
     (; u, div, normatrix) = cache
     (; dx, dz, nx, nz) = grid
     #add max iter
@@ -122,12 +122,17 @@ function compute_pressure!(semi)
             u[3,i,k] = u[3,i,k] + om*0.25*(u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k] + u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k] -dx*dz*div[i,k])
             end
         end
+        # This is not efficient
+	    update_ghost_values!(cache, grid, boundary_conditions)
+
+        # This is not efficient
         for i = 1:nx
             for k = 1:nz
         normatrix[i,k] = abs((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k])    
             end
         end
         normres = maximum(normatrix)
+        @show normres
     end
 end
 
