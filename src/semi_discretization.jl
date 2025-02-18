@@ -62,7 +62,9 @@ function create_cache(equations, grid::CartesianGrid2D, initial_condition)
     fu = OffsetArray(fu_, OffsetArrays.Origin(1, 1-nbx, 1-nbz, 1))
     initialize_variables!(u, grid, initial_condition, equations)
 
-    cache = (; u, du, fu, div)
+    normatrix = zeros(RealT, nx, nz)
+
+    cache = (; u, du, fu, div, normatrix)
 
     return cache
 end

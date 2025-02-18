@@ -16,4 +16,6 @@ export flux_test
 
 export SVector
 
+export solve, ODE
+
 end

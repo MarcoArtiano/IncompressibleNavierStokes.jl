@@ -23,22 +23,22 @@ end
 
 function apply_right_bc!(cache, right::PeriodicBC, nx)
 	(; u) = cache
-	u[:, nx+1, :] .= @views u[:, 2, :]
+	u[:, nx+1, :] .= @views u[:, 1, :]
 end
 
 function apply_left_bc!(cache, left::PeriodicBC, nx)
 	(; u) = cache
-	u[:, 0, :] .= @views u[:, nx-1, :]
+	u[:, 0, :] .= @views u[:, nx, :]
 end
 
 function apply_bottom_bc!(cache, bottom::PeriodicBC, nz)
 	(; u) = cache
-	u[:, :, 0] .= @views u[:, :, nz-1]
+	u[:, :, 0] .= @views u[:, :, nz]
 end
 
 function apply_top_bc!(cache, top::PeriodicBC, nz)
 	(; u) = cache
-	u[:, :, nz+1] .= @views u[:, :, 2]
+	u[:, :, nz+1] .= @views u[:, :, 1]
 end
 
 function compute_surface_fluxes!(semi)
@@ -76,8 +76,8 @@ function update_rhs!(semi)
 			fn_rr = fu[:, i+1, k, 1]
 			fn_ll = fu[:, i, k, 1]
 
-			gn_rr = fu[:, i, k+1, 1]
-			gn_ll = fu[:, i, k, 1]
+			gn_rr = fu[:, i, k+1, 2]
+			gn_ll = fu[:, i, k, 2]
 			rhs = (fn_rr - fn_ll) / dx + (gn_rr - gn_ll) / dz
 			du[:, i, k] .= rhs
 		end
@@ -101,7 +101,7 @@ function compute_div!(semi)
 
     for i = 1:nx
         for k = 1:nz
-            div[i,k] = (u[1,i,k] - u[1,i-1,k])/dx + (u[2,i,k] - u[2,i,k-1])/dz 
+            div[i,k] = (u[1,i+1,k] - u[1,i,k])/dx + (u[2,i,k+1] - u[2,i,k])/dz 
         end
     end
 
@@ -112,18 +112,38 @@ function compute_pressure!(semi)
     normres = 1
     om = 1.6
     (; cache, grid) = semi
-    (; u, div) = cache
+    (; u, div, normatrix) = cache
     (; dx, dz, nx, nz) = grid
+    #add max iter
     while normres > tol
-
+        # That doesn't not support non-uniform mesh.
         for i = 1:nx
             for k = 1:nz
-            u[3,i,k] = u[3,i,k] + om*0.25*((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k]);
-            normres = max(0.25*((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k]), normres)    
-                @show normres
+            u[3,i,k] = u[3,i,k] + om*0.25*(u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k] + u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k] -dx*dz*div[i,k])
+            end
         end
+        for i = 1:nx
+            for k = 1:nz
+        normatrix[i,k] = abs((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k])    
+            end
+        end
+        normres = maximum(normatrix)
+    end
+end
+
+function project_pressure!(semi)
+
+    (; cache, grid) = semi
+    (; u, div, normatrix) = cache
+    (; dx, dz, nx, nz) = grid
+
+    for i = 1:nx
+        for k = 1:nz
+            u[1,i,k] = u[1,i,k] -(u[3,i,k] - u[3,i-1,k])/dx
+            u[2,i,k] = u[2,i,k] -(u[3,i,k] - u[3,i,k-1])/dz
         end
     end
+
 end
 
 # x - direction    

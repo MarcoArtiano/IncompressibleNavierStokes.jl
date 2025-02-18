@@ -33,14 +33,14 @@ function mesh(domain::Tuple{<:Real, <:Real, <:Real, <:Real}, nx, nz; nbx = 1, nb
     # Nbx and Nbz are the number of ghost cells in the x and z direction
     # For Nbx = 0 and Nbz = 0 this is broken!!
     ## Creating the cell centers
-    xc_ = LinRange(xmin - 0.5f0*dx -(nbx-1)*dx, xmax + 0.5f0*dx +(nbx-1)*dx, nx + 2*nbx)
-    zc_ = LinRange(zmin - 0.5f0*dz -(nbz-1)*dz, zmax + 0.5f0*dz +(nbz-1)*dz, nz + 2*nbz)
+    xc_ = LinRange(xmin - 0.5f0*dx -(nbx-1)*dx, xmax - 0.5f0*dx +(nbx-1)*dx, (nx-1) + 2*nbx)
+    zc_ = LinRange(zmin - 0.5f0*dz -(nbz-1)*dz, zmax - 0.5f0*dz +(nbz-1)*dz, (nz-1) + 2*nbz)
     xc = OffsetArray(xc_, OffsetArrays.Origin(1-nbx))
     zc = OffsetArray(zc_, OffsetArrays.Origin(1-nbz))
     
     ## Creating the cell faces
-    xf_ = LinRange(xmin - nbx*dx, xmax + nbx*dx, nx+1 + 2*nbx)
-    zf_ = LinRange(zmin - nbz*dz, zmax + nbz*dz, nz+1 + 2*nbz)
+    xf_ = LinRange(xmin - nbx*dx, xmax + (nbx-1)*dx, nx + 2*nbx)
+    zf_ = LinRange(zmin - nbz*dz, zmax + (nbz-1)*dz, nz + 2*nbz)
     xf = OffsetArray(xf_, OffsetArrays.Origin(1-nbx))
     zf = OffsetArray(zf_, OffsetArrays.Origin(1-nbz))
 
