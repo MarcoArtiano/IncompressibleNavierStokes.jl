@@ -1,0 +1,4 @@
+name = "IncompressibleNavierStokes"
+uuid = "5e6f1c7c-09c8-4325-b523-2dfb1e2b984d"
+authors = ["Marco Artiano <artianomarco97@gmail.com>"]
+version = "0.1.0"
