@@ -1,5 +1,12 @@
 module IncompressibleNavierStokes
 
-greet() = print("Hello World!")
+using StaticArrays
+using OffsetArrays
 
-end # module IncompressibleNavierStokes
+include("types.jl")
+include("mesh.jl")
+include("semi_discretization.jl")
+
+export mesh, SemiDiscretization
+
+end
