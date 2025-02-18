@@ -101,7 +101,7 @@ function compute_div!(semi)
 
     for i = 1:nx
         for k = 1:nz
-            div[i,k] = (u[1,i+1,k] - u[1,i,k])/dx + (u[2,i,k+1] - u[2,i,k])/dz 
+            div[i,k] = (u[1,i,k] - u[1,i-1,k])/dx + (u[2,i,k] - u[2,i,k-1])/dz 
         end
     end
 
@@ -118,9 +118,9 @@ function compute_pressure!(semi)
 
         for i = 1:nx
             for k = 1:nz
-
             u[3,i,k] = u[3,i,k] + om*0.25*((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k]);
             normres = max(0.25*((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k]), normres)    
+                @show normres
         end
         end
     end
