@@ -1,10 +1,10 @@
 using IncompressibleNavierStokes
-using CairoMakie
 ## IncompressibleEuler2D(gamma, rho)
 equations = IncompressibleEuler2D(1.4, 1.0)
 
-function initial_conditoin_tgv(x, xf, t, equations::IncompressibleEuler2D)
-
+function initial_condition_tgv(x, xf, t, equations::IncompressibleEuler2D)
+    # xf are the nodes values
+    # x are the center values
     u = -sinpi(xf[1]) * cospi(x[2])
     w =  cospi(x[1]) * sinpi(xf[2])
     p = 0.25f0*(cospi(2*xf[1])+sinpi(2*xf[2]))
@@ -16,12 +16,12 @@ nx = 29
 nz = 29
 domain = (0.0, 2.0, 0.0, 2.0)
 grid = IncompressibleNavierStokes.mesh(domain, nx, nz)
-surface_flux = flux_test
-semi = SemiDiscretization(grid, equations, flux_test, initial_conditoin_tgv)
+surface_flux = flux_div
+semi = SemiDiscretization(grid, equations, surface_flux, initial_condition_tgv)
 
 dt =  6e-4
 
-tspan = (0.0, 12)
+tspan = (0.0, 12.0)
 
 ode = ODE(semi, tspan)
 
