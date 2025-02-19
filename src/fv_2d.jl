@@ -1,4 +1,4 @@
-
+import Trixi: get_node_vars
 
 function update_solution!(semi, dt)
 	(; cache, boundary_conditions, grid) = semi
@@ -41,6 +41,11 @@ function apply_top_bc!(cache, top::PeriodicBC, nz)
 	u[:, :, nz+1] .= @views u[:, :, 1]
 end
 
+@inline function get_node_vars(u, ::Val{N}, indices...) where {N}
+    SVector(ntuple(@inline(v->u[v, indices...]), N))
+end
+
+
 function compute_surface_fluxes!(semi)
 	(; grid, equations, surface_flux, cache) = semi
 	(; nx, nz) = grid
@@ -49,16 +54,16 @@ function compute_surface_fluxes!(semi)
 	nvar = Val(nvariables(equations))
 	for i ∈ 1:nx+1
 		for k ∈ 1:nz+1
+			u_rr = get_node_vars(u, nvar, i, k)
+			u_ll = get_node_vars(u, nvar, i-1, k)
+			u_dd = get_node_vars(u, nvar, i, k-1)
+			orientation = 1	
+			flux = surface_flux(u_ll, u_rr, u_dd, orientation, equations)					
+			fu[:, i, k, 1] .= flux
 
-			# x - direction
-			fu[1, i, k, 1] = (u[1, i, k] + u[1, i-1, k])^2 * 0.25f0
-
-			fu[2, i, k, 1] = (u[1, i, k] + u[1, i, k-1]) * (u[2, i, k] + u[2, i-1, k]) * 0.25f0
-
-			# z - direction
-			fu[1, i, k, 2] = (u[1, i, k] + u[1, i, k-1]) * (u[2, i, k] + u[2, i-1, k]) * 0.25f0
-
-			fu[2, i, k, 2] = (u[2, i, k] + u[2, i, k-1])^2 * 0.25f0
+			orientation = 2			
+			flux = surface_flux(u_dd, u_rr, u_ll, orientation, equations)
+			fu[:, i, k, 2] .= flux
 
 		end
 	end
@@ -73,11 +78,13 @@ function update_rhs!(semi)
 	nvar = Val(nvariables(equations))
 	for i ∈ 1:nx
 		for k ∈ 1:nz
-			fn_rr = fu[:, i+1, k, 1]
-			fn_ll = fu[:, i, k, 1]
+			orientation = 1
+			fn_rr = get_node_vars(fu, nvar, i+1, k, orientation) 
+			fn_ll = get_node_vars(fu, nvar, i, k, orientation) 
 
-			gn_rr = fu[:, i, k+1, 2]
-			gn_ll = fu[:, i, k, 2]
+			orientation = 2
+			gn_rr = get_node_vars(fu, nvar, i, k+1, orientation) 
+			gn_ll = get_node_vars(fu, nvar, i, k, orientation) 
 			rhs = (fn_rr - fn_ll) / dx + (gn_rr - gn_ll) / dz
 			du[:, i, k] .= rhs
 		end
@@ -151,29 +158,3 @@ function project_pressure!(semi)
 
 end
 
-# x - direction    
-# ul = get_node_staggered(u, nvar, equations, i-1, j)
-# ur = get_node_staggered(u, nvar, equations, i, j)
-
-#flux = surface_flux(ul, ur, 1, equations)
-
-# x - direction    
-# ul = get_node_staggered(u, nvar, equations, i-1, j)
-# ur = get_node_staggered(u, nvar, equations, i, j)
-
-#flux = surface_flux(ul, ur, 1, equations)
-#@. fu[1, i, k, 1] = flux[1]
-
-
-# z - direction
-#ul = get_node_vars(u, nvar, i-1)
-#ur = get_node_vars(u, nvar, i)
-
-#flux = surface_flux(ul, ur, 2, equations)    
-#@. fu[:, i, k, 2] = flux
-
-function get_node_staggered(u, nvar, equations::IncompressibleEuler2D, i, j)
-	#incomplete
-	return SVector(u[i, j], u[i+1, j-1])
-
-end
