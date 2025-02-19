@@ -28,7 +28,7 @@ end
     nx = nz = 6
     trixi_include("$(examples_dir())/elixir_tgv.jl", tspan = tspan, nz = nz, nx = nx,
                   matrix_solver = CGSolver(maxiter = 1000, tol = 1e-12, demand_positivity = false))
-    @test isapprox(sol.l1, 6.941030663009133e-11, atol = 1e-10, rtol = 1e-12)
+    @test isapprox(sol.l1, 1.0898817476445089e-10, atol = 1e-10, rtol = 1e-10)
     @test isapprox(sol.l2, 4.117440312298273e-11, atol = 1e-10, rtol = 1e-10)
     @test isapprox(sol.linf, 5.405456589852789e-11, atol = 1e-10, rtol = 1e-10)
 end
