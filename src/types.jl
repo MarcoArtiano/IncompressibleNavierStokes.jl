@@ -1,3 +1,4 @@
+using ConjugateGradientsGPU
 using Trixi: AbstractEquations
 
 """
@@ -59,10 +60,24 @@ abstract type AbstractMatrixSolver end
 struct CGSolver{RealT <: Real} <: AbstractMatrixSolver
     maxiter::Int
     tol::RealT
+    demand_positivity::Bool
+    # TODO - Add CGData
 end
 
-function CGSolver(; maxiter = 100, tol = 1e-6)
-    CGSolver(maxiter, tol)
+# Demand_positivity allows non-positive definite matrices to work,
+# although it is better to us BiCGSTAB in that case
+function CGSolver(; maxiter = 100, tol = 1e-6, demand_positivity = true)
+    CGSolver(maxiter, tol, demand_positivity)
+end
+
+struct BiCGSTABSolver{RealT <: Real} <: AbstractMatrixSolver
+    maxiter::Int
+    tol::RealT
+    # TODO - Add BiCGData
+end
+
+function BiCGSTABSolver(; maxiter = 100, tol = 1e-6)
+    BiCGSTABSolver(maxiter, tol)
 end
 
 struct SORSolver <: AbstractMatrixSolver end

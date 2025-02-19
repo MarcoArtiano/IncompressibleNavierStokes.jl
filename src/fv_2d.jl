@@ -1,5 +1,5 @@
 import Trixi: get_node_vars
-using ConjugateGradients
+using ConjugateGradientsGPU
 
 function update_solution!(semi, dt)
 	(; cache, boundary_conditions, grid) = semi
@@ -173,10 +173,26 @@ function compute_pressure!(semi, matrix_solver::CGSolver)
 	update_ghost_values!(cache.u, grid, boundary_conditions)
 	# @assert false div, cache.u[3,1:nx,1:nz]
 
+	@unpack tol, maxiter, demand_positivity = matrix_solver
+	u_new, exit_code, num_iters = cg(
+		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
+		maxIter = maxiter, demand_positivity = demand_positivity)
+
+	semi.cache.u[3,1:nx,1:nz] .= reshape(u_new, (nx, nz))
+	update_ghost_values!(cache.u, grid, boundary_conditions)
+end
+
+function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
+	(; cache, grid, boundary_conditions) = semi
+	(; div) = cache
+	(;dx, dz, nx, nz) = grid
+	update_ghost_values!(cache.u, grid, boundary_conditions)
+
 	@unpack tol, maxiter = matrix_solver
-	u_new, exit_code, num_iters = bicgstab((x,u) -> laplace_2d!(x, u, nx, nz, dx, dz),
-									 vec(div[1:nx, 1:nz]), tol = tol,
-									 maxIter = maxiter)
+	u_new, exit_code, num_iters = bicgstab(
+		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
+		maxIter = maxiter)
+
 	semi.cache.u[3,1:nx,1:nz] .= reshape(u_new, (nx, nz))
 	update_ghost_values!(cache.u, grid, boundary_conditions)
 end
