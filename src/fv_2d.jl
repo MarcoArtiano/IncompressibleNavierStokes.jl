@@ -116,7 +116,7 @@ function compute_div!(semi)
 
 end
 
-function compute_pressure!(semi)
+function compute_pressure!(semi; max_sor_iter = 1000)
     # TODO: Move into a struct:
     tol = 1e-14
     normres = 1
@@ -125,7 +125,13 @@ function compute_pressure!(semi)
     (; u, div, normatrix) = cache
     (; dx, dz, nx, nz) = grid
     #add max iter
+	it = 0
     while normres > tol
+		if it > max_sor_iter
+			println("Max iter reached")
+			break
+		end
+		it += 1
         # That doesn't not support non-uniform mesh.
         for i = 1:nx
             for k = 1:nz
@@ -170,8 +176,8 @@ function compute_error(semi, t)
 	l1, l2, linf = 0.0, 0.0, 0.0
 	for i in 1:nx, k in 1:nz
 		exact = initial_condition((xc[i], zc[k]), (xf[i], zf[k]), t, equations)
-		u_node = get_node_vars(u, nvar, i, k)
-		error = abs.(u_node - exact)
+		u_node = get_node_vars(u, nvar, i, k)[1:2]
+		error = abs(u_node[1] - exact[1]) + abs(u_node[2] - exact[2])
 		l1 += sum(error) * dx * dz
 		l2 += sum(error.^2) * dx * dz
 		linf = max(linf, maximum(error))
