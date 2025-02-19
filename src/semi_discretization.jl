@@ -56,10 +56,11 @@ function create_cache(equations, grid::CartesianGrid2D, initial_condition)
 
     div_ = zeros(RealT, nx + 2*nbx, nz + 2*nbz)
     div = OffsetArray(div_, OffsetArrays.Origin(1-nbx, 1-nbz))
-
-    orientations = 2
-    fu_ = zeros(RealT, nvar, nx + 2*nbx, nz + 2*nbz, orientations)
+    # TODO: use Trixi function for the dimension
+    dimensions = 2
+    fu_ = zeros(RealT, nvar, nx + 2*nbx, nz + 2*nbz, dimensions)
     fu = OffsetArray(fu_, OffsetArrays.Origin(1, 1-nbx, 1-nbz, 1))
+
     initialize_variables!(u, grid, initial_condition, equations)
 
     normatrix = zeros(RealT, nx, nz)

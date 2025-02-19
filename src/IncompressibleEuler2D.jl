@@ -18,12 +18,13 @@ Compute the flux for the IncompressibleEuler2D equations.
 """
 function flux(u, orientation::Integer, equations::IncompressibleEuler2D)
     v1, v2, p = u
-    
+    # TODO: write the analytical divergence form flux:
     return SVector(v1, v2, zero(eltype(u)))
 end
 
-
-function flux_test(u_ll, u_rr, u_dd, orientation::Integer, equations::IncompressibleEuler2D)
+# Divergence form for staggered grid of the non-linear terms.
+# This is equivalent to the advection form, since the divergence of the velocity field is 0.
+function flux_div(u_ll, u_rr, u_dd, orientation::Integer, equations::IncompressibleEuler2D)
     v1_rr, v2_rr, p_rr = u_rr
     v1_ll, v2_ll, p_ll = u_ll
     v1_dd, v2_dd, p_dd = u_dd

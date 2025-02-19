@@ -12,7 +12,7 @@ include("time_integration.jl")
 include("fv_2d.jl")
 export mesh, SemiDiscretization, IncompressibleEuler2D
 
-export flux_test
+export flux_div
 
 export SVector
 

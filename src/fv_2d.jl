@@ -92,6 +92,8 @@ function update_rhs!(semi)
 
 end
 
+# TODO: to add a struct for Poisson solver: div flux, p flux, poisson parameters
+
 function apply_correction!(semi)
 
     compute_div!(semi)
@@ -115,7 +117,8 @@ function compute_div!(semi)
 end
 
 function compute_pressure!(semi)
-    tol = 1e-13
+    # TODO: Move into a struct:	
+    tol = 1e-14
     normres = 1
     om = 1.6
     (; cache, grid, boundary_conditions) = semi
@@ -139,7 +142,6 @@ function compute_pressure!(semi)
             end
         end
         normres = maximum(normatrix)
-        @show normres
     end
 end
 
