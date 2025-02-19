@@ -25,5 +25,4 @@ tspan = (0.0, 12.0)
 
 ode = ODE(semi, tspan)
 
-sol = solve(ode, dt)
-   
+sol = solve(ode, dt);

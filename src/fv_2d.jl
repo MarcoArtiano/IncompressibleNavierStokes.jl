@@ -57,11 +57,11 @@ function compute_surface_fluxes!(semi)
 			u_rr = get_node_vars(u, nvar, i, k)
 			u_ll = get_node_vars(u, nvar, i-1, k)
 			u_dd = get_node_vars(u, nvar, i, k-1)
-			orientation = 1	
-			flux = surface_flux(u_ll, u_rr, u_dd, orientation, equations)					
+			orientation = 1
+			flux = surface_flux(u_ll, u_rr, u_dd, orientation, equations)
 			fu[:, i, k, 1] .= flux
 
-			orientation = 2			
+			orientation = 2
 			flux = surface_flux(u_dd, u_rr, u_ll, orientation, equations)
 			fu[:, i, k, 2] .= flux
 
@@ -79,12 +79,12 @@ function update_rhs!(semi)
 	for i ∈ 1:nx
 		for k ∈ 1:nz
 			orientation = 1
-			fn_rr = get_node_vars(fu, nvar, i+1, k, orientation) 
-			fn_ll = get_node_vars(fu, nvar, i, k, orientation) 
+			fn_rr = get_node_vars(fu, nvar, i+1, k, orientation)
+			fn_ll = get_node_vars(fu, nvar, i, k, orientation)
 
 			orientation = 2
-			gn_rr = get_node_vars(fu, nvar, i, k+1, orientation) 
-			gn_ll = get_node_vars(fu, nvar, i, k, orientation) 
+			gn_rr = get_node_vars(fu, nvar, i, k+1, orientation)
+			gn_ll = get_node_vars(fu, nvar, i, k, orientation)
 			rhs = (fn_rr - fn_ll) / dx + (gn_rr - gn_ll) / dz
 			du[:, i, k] .= rhs
 		end
@@ -110,14 +110,14 @@ function compute_div!(semi)
 
     for i = 1:nx
         for k = 1:nz
-            div[i,k] = (u[1,i+1,k] - u[1,i,k])/dx + (u[2,i,k+1] - u[2,i,k])/dz 
+            div[i,k] = (u[1,i+1,k] - u[1,i,k])/dx + (u[2,i,k+1] - u[2,i,k])/dz
         end
     end
 
 end
 
 function compute_pressure!(semi)
-    # TODO: Move into a struct:	
+    # TODO: Move into a struct:
     tol = 1e-14
     normres = 1
     om = 1.6
@@ -138,7 +138,7 @@ function compute_pressure!(semi)
         # This is not efficient
         for i = 1:nx
             for k = 1:nz
-        normatrix[i,k] = abs((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k])    
+        normatrix[i,k] = abs((u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k])/dx^2 + (u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k])/dz^2 -div[i,k])
             end
         end
         normres = maximum(normatrix)
@@ -160,3 +160,22 @@ function project_pressure!(semi)
 
 end
 
+function compute_error(semi, t)
+	(; cache, grid, equations, initial_condition) = semi
+	(; u) = cache
+	(; nx, nz, dx, dz) = grid
+	(; xc, zc, xf, zf) = grid
+	nvar = Val(nvariables(equations))
+
+	l1, l2, linf = 0.0, 0.0, 0.0
+	for i in 1:nx, k in 1:nz
+		exact = initial_condition((xc[i], zc[k]), (xf[i], zf[k]), t, equations)
+		u_node = get_node_vars(u, nvar, i, k)
+		error = abs.(u_node - exact)
+		l1 += sum(error) * dx * dz
+		l2 += sum(error.^2) * dx * dz
+		linf = max(linf, maximum(error))
+	end
+	l2 = sqrt(l2)
+	return l1, l2, linf
+end

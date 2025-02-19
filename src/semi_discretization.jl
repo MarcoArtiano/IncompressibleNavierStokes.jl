@@ -79,5 +79,4 @@ function initialize_variables!(u, grid::CartesianGrid2D, initial_condition, equa
            u[:, i, k] = initial_condition((xc[i], zc[k]), (xf[i], zf[k]), 0.0, equations)
         end
     end
-
 end

@@ -8,7 +8,7 @@ struct ODE{Semi <: SemiDiscretization, RealT <: Real}
     tspan::Tuple{RealT, RealT}
 end
 
-function solve(ode::ODE, dt; maxiters = nothing)
+function solve(ode::ODE, dt; maxiters = nothing, analysis_interval = 1000)
     (; semi, tspan) = ode
     (; cache) = semi
     Tf = tspan[2]
@@ -20,11 +20,18 @@ function solve(ode::ODE, dt; maxiters = nothing)
         end
 
        update_solution!(semi, dt)
+       l1, l2, linf = compute_error(semi, t)
 
        t += dt; it += 1
-       @show t, dt, it
+
+       if it % analysis_interval == 0
+        @show t, dt, it
+        @show l1, l2, linf
+       end
     end
 
-    sol = (; cache.u, semi)
+    l1, l2, linf = compute_error(semi, t)
+
+    sol = (; cache.u, semi, l1, l2, linf)
     return sol
 end
