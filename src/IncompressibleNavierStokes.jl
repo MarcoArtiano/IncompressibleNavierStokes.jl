@@ -21,4 +21,6 @@ export SVector
 
 export solve, ODE
 
+export CGSolver, SORSolver
+
 end

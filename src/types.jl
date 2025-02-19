@@ -46,3 +46,23 @@ struct BoundaryConditions{LeftBC, RightBC, BottomBC, TopBC}
        new{typeof(left), typeof(right), typeof(bottom), typeof(top)}(left, right, bottom, top)
     end
 end
+
+"""
+    AbstractMatrixSolver
+
+Abstract type for matrix solvers like CG, SOR
+"""
+
+abstract type AbstractMatrixSolver end
+
+# TODO - This is not just a type. Move it to a different file.
+struct CGSolver{RealT <: Real} <: AbstractMatrixSolver
+    maxiter::Int
+    tol::RealT
+end
+
+function CGSolver(; maxiter = 100, tol = 1e-6)
+    CGSolver(maxiter, tol)
+end
+
+struct SORSolver <: AbstractMatrixSolver end
