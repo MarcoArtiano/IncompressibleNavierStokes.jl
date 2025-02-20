@@ -32,3 +32,17 @@ end
     @test isapprox(sol.l2, 4.117440312298273e-11, atol = 1e-9, rtol = 1e-9)
     @test isapprox(sol.linf, 5.405456589852789e-11, atol = 1e-9, rtol = 1e-9)
 end
+
+
+@testset "TGV test CG Float32" begin
+    RealT = Float32
+    tspan = map(RealT, (0.0, 12.0))
+    tol = map(RealT, 0.5e-5)
+    nx = nz = 16
+    trixi_include("$(examples_dir())/elixir_tgv_CG.jl", tspan = tspan, nz = nz, nx = nx,
+                  RealT = RealT,
+                  matrix_solver = CGSolver(maxiter = 1000, tol = tol))
+    @test isapprox(sol.l1, 7.953803598513033e-7, atol = 1e-4, rtol = 1e-6)
+    @test isapprox(sol.l2, 1.2340538743632972e-6, atol = 1e-4, rtol = 1e-6)
+    @test isapprox(sol.linf, 1.1376580005162396e-5, atol = 1e-4, rtol = 1e-6)
+end
