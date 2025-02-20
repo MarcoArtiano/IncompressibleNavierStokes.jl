@@ -169,6 +169,7 @@ function laplace_2d!(x, u, nx, nz, dx, dz)
 		end
 	end
 
+	# Solve -Δ because that is positive definite
 	x .*= -1.0
 end
 
@@ -183,6 +184,7 @@ function compute_pressure!(semi, matrix_solver::CGSolver)
 		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
 		maxIter = maxiter)
 
+	# Since -Δ was solved (for positive definiteness) and physical equation has +Δ
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
 	update_ghost_values!(cache, grid, boundary_conditions)
 end
@@ -198,6 +200,7 @@ function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
 		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
 		maxIter = maxiter)
 
+	# Since -Δ was solved (for positive definiteness) and physical equation has +Δ
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
 	update_ghost_values!(cache, grid, boundary_conditions)
 end
