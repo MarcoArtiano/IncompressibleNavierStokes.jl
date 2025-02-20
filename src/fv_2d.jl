@@ -259,7 +259,7 @@ function compute_pressure!(semi, matrix_solver::SORSolver)
     end
 end
 
-function laplace_2d!(x, u, nx, nz, dx, dz)
+function laplace_2d!(x, u, nx, nz, dx, dz, backend::MyCPU)
 	x_mat = reshape(x, nx, nz)
 	u_mat = reshape(u, nx, nz)
 
@@ -280,6 +280,28 @@ function laplace_2d!(x, u, nx, nz, dx, dz)
 	x .*= -1.0
 end
 
+function laplace_2d!(x, u, nx, nz, dx, dz, backend::Union{CPU, GPU})
+	x_mat = reshape(x, nx, nz)
+	u_mat = reshape(u, nx, nz)
+
+	laplace_2d_kernel!(backend)(x_mat, u_mat, dx, dz, nx, nz, ndrange = (nx, nz))
+end
+
+@kernel function laplace_2d_kernel!(x, u, dx, dz, nx, nz)
+	i, k = @index(Global, NTuple)
+
+	# TODO - These `if` conditions do not sound GPU efficient
+	im1 = (i == 1)  ? nx : i - 1  # Wrap around for periodic BC
+	ip1 = (i == nx) ? 1  : i + 1  # Wrap around for periodic BC
+
+	km1 = (k == 1)  ? nz : k - 1  # Wrap around for periodic BC
+	kp1 = (k == nz) ? 1  : k + 1  # Wrap around for periodic BC
+
+	x[i, k]  = (u[ip1, k] - 2.0f0 * u[i, k] + u[im1, k]) / dx^2  # x direction
+	x[i, k] += (u[i, km1] - 2.0f0 * u[i, k] + u[i, kp1]) / dz^2  # z direction
+	x[i, k] *= -1.0
+end
+
 function compute_pressure!(semi, matrix_solver::CGSolver)
 	(; cache, grid, boundary_conditions) = semi
 	(; div, backend) = cache
@@ -288,8 +310,9 @@ function compute_pressure!(semi, matrix_solver::CGSolver)
 
 	@unpack tol, maxiter = matrix_solver
 	u_new, exit_code, num_iters = cg(
-		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
-		maxIter = maxiter)
+		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz, backend),
+							 vec(div[1:nx, 1:nz]), tol = tol,
+							 maxIter = maxiter)
 
 	# Since -Δ was solved (for positive definiteness) and physical equation has +Δ
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
@@ -304,8 +327,9 @@ function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
 
 	@unpack tol, maxiter = matrix_solver
 	u_new, exit_code, num_iters = bicgstab(
-		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
-		maxIter = maxiter)
+		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz, backend),
+							 vec(div[1:nx, 1:nz]), tol = tol,
+							 maxIter = maxiter)
 
 	# Since -Δ was solved (for positive definiteness) and physical equation has +Δ
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
