@@ -2,85 +2,98 @@ import Trixi: get_node_vars
 using ConjugateGradientsGPU
 
 function update_solution!(semi, dt)
-	(; cache, boundary_conditions, grid) = semi
+	(; cache, equations, boundary_conditions, grid) = semi
 	(; u, du, backend) = cache
 	@. du = 0.0f0
-	update_ghost_values!(cache, grid, boundary_conditions, backend)
+	update_ghost_values!(equations, cache, grid, boundary_conditions, backend)
 	compute_surface_fluxes!(semi, backend) # Approximations of flux without pressure
 	update_rhs!(semi, backend) # Compute RHS without pressure term
-	@. u -= dt * du # Evolve solution without pressure term
+	@. u.parent -= dt * du.parent # Evolve solution without pressure term
     apply_correction!(semi) # Include pressure term correction
 
 end
 
-function update_ghost_values!(cache, grid::CartesianGrid2D, boundary_conditions::BoundaryConditions,
+function update_ghost_values!(equations, cache, grid::CartesianGrid2D,
+							  boundary_conditions::BoundaryConditions,
 							  backend)
 
-	apply_left_bc!(cache, boundary_conditions.left, grid.nx, backend)
-	apply_right_bc!(cache, boundary_conditions.right, grid.nx, backend)
-	apply_bottom_bc!(cache, boundary_conditions.bottom, grid.nz, backend)
-	apply_top_bc!(cache, boundary_conditions.top, grid.nz, backend)
+	apply_left_bc!(equations, cache, boundary_conditions.left, grid.nx, backend)
+	apply_right_bc!(equations, cache, boundary_conditions.right, grid.nx, backend)
+	apply_bottom_bc!(equations, cache, boundary_conditions.bottom, grid.nz, backend)
+	apply_top_bc!(equations, cache, boundary_conditions.top, grid.nz, backend)
 
 end
 
-function apply_right_bc!(cache, right::PeriodicBC, nx, backend::MyCPU)
+function apply_right_bc!(equations, cache, right::PeriodicBC, nx, backend::MyCPU)
 	(; u) = cache
 	u[:, nx+1, :] .= @views u[:, 1, :]
 end
 
-function apply_left_bc!(cache, left::PeriodicBC, nx, backend::MyCPU)
+function apply_left_bc!(equations, cache, left::PeriodicBC, nx, backend::MyCPU)
 	(; u) = cache
 	u[:, 0, :] .= @views u[:, nx, :]
 end
 
-function apply_bottom_bc!(cache, bottom::PeriodicBC, nz, backend::MyCPU)
+function apply_bottom_bc!(equations, cache, bottom::PeriodicBC, nz, backend::MyCPU)
 	(; u) = cache
 	u[:, :, 0] .= @views u[:, :, nz]
 end
 
-function apply_top_bc!(cache, top::PeriodicBC, nz, backend::MyCPU)
+function apply_top_bc!(equations, cache, top::PeriodicBC, nz, backend::MyCPU)
 	(; u) = cache
 	u[:, :, nz+1] .= @views u[:, :, 1]
 end
 
-function apply_right_bc!(cache, right::PeriodicBC, nx, backend::Union{CPU, GPU})
+function apply_right_bc!(equations, cache, right::PeriodicBC, nx, backend::Union{CPU, GPU})
 	(; u, backend) = cache
-	apply_right_bc_periodic_kernel!(backend)(u, nx, ndrange = nx)
+	nvar = Val(nvariables(equations))
+	apply_right_bc_periodic_kernel!(backend)(u, nvar, nx, ndrange = nx)
 end
 
-@kernel function apply_right_bc_periodic_kernel!(u, nx)
+@kernel function apply_right_bc_periodic_kernel!(u, nvar::Val{N}, nx) where {N}
 	k = @index(Global, Linear)
-	u[:, nx+1, k] = u[:, 1, k]
+	for n = 1:N
+		u[n, nx+1, k] = u[n, 1, k]
+	end
 end
 
-function apply_left_bc!(cache, left::PeriodicBC, nx, backend::Union{CPU, GPU})
+function apply_left_bc!(equations, cache, left::PeriodicBC, nx, backend::Union{CPU, GPU})
 	(; u, backend) = cache
-	apply_left_bc_periodic_kernel!(backend)(u, nx, ndrange = nx)
+	nvar = Val(nvariables(equations))
+	apply_left_bc_periodic_kernel!(backend)(u, nvar, nx, ndrange = nx)
 end
 
-@kernel function apply_left_bc_periodic_kernel!(u, nx)
+@kernel function apply_left_bc_periodic_kernel!(u, nvar::Val{N}, nx) where {N}
 	k = @index(Global, Linear)
-	u[:, 0, k] = u[:, nx, k]
+	for n = 1:N
+		u[n, 0, k] = u[n, nx, k]
+	end
 end
 
-function apply_bottom_bc!(cache, bottom::PeriodicBC, nz, backend::Union{CPU, GPU})
+function apply_bottom_bc!(equations, cache, bottom::PeriodicBC, nz, backend::Union{CPU, GPU})
 	(; u, backend) = cache
-	apply_bottom_bc_periodic_kernel!(backend)(u, nz, ndrange = nz)
+	nvar = Val(nvariables(equations))
+	apply_bottom_bc_periodic_kernel!(backend)(u, nvar, nz, ndrange = nz)
 end
 
-@kernel function apply_bottom_bc_periodic_kernel!(u, nz)
+@kernel function apply_bottom_bc_periodic_kernel!(u, nvar::Val{N}, nz) where {N}
 	i = @index(Global, Linear)
-	u[:, i, 0] = u[:, i, nz]
+	for n = 1:N
+		u[n, i, 0] = u[n, i, nz]
+	end
 end
 
-function apply_top_bc!(cache, top::PeriodicBC, nz, backend::Union{CPU, GPU})
+function apply_top_bc!(equations, cache, top::PeriodicBC, nz, backend::Union{CPU, GPU})
 	(; u, backend) = cache
-	apply_top_bc_periodic_kernel!(backend)(u, nz, ndrange = nz)
+	nvar = Val(nvariables(equations))
+	apply_top_bc_periodic_kernel!(backend)(u, nvar, nz, ndrange = nz)
 end
 
-@kernel function apply_top_bc_periodic_kernel!(u, nz)
+@kernel function apply_top_bc_periodic_kernel!(u, nvar::Val{N}, nz) where {N}
 	i = @index(Global, Linear)
-	u[:, i, nz+1] = u[:, i, 1]
+	for n = 1:N
+		u[n, i, nz+1] = u[n, i, 1]
+	end
 end
 
 @inline function get_node_vars(u, ::Val{N}, indices...) where {N}
@@ -192,7 +205,7 @@ function apply_correction!(semi)
 	(; backend) = semi.cache
     compute_div!(semi, backend) # Divergence of the velocity field evolved without pressure term
     compute_pressure!(semi, semi.matrix_solver) # Solve for pressure as Δp = div(u)
-    project_pressure!(semi) # Include the pressure term derivative in the evolution
+    project_pressure!(semi, backend) # Include the pressure term derivative in the evolution
 
 end
 
@@ -247,7 +260,7 @@ function compute_pressure!(semi, matrix_solver::SORSolver)
             end
         end
         # This is not efficient
-	    update_ghost_values!(cache, grid, boundary_conditions, backend)
+	    update_ghost_values!(equations, cache, grid, boundary_conditions, backend)
 
         # This is not efficient
         for i = 1:nx
@@ -303,10 +316,10 @@ end
 end
 
 function compute_pressure!(semi, matrix_solver::CGSolver)
-	(; cache, grid, boundary_conditions) = semi
+	(; cache, grid, equations, boundary_conditions) = semi
 	(; div, backend) = cache
 	(;dx, dz, nx, nz) = grid
-	update_ghost_values!(cache, grid, boundary_conditions, backend)
+	update_ghost_values!(equations, cache, grid, boundary_conditions, backend)
 
 	@unpack tol, maxiter = matrix_solver
 	u_new, exit_code, num_iters = cg(
@@ -316,14 +329,14 @@ function compute_pressure!(semi, matrix_solver::CGSolver)
 
 	# Since -Δ was solved (for positive definiteness) and physical equation has +Δ
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
-	update_ghost_values!(cache, grid, boundary_conditions, backend)
+	update_ghost_values!(equations, cache, grid, boundary_conditions, backend)
 end
 
 function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
-	(; cache, grid, boundary_conditions) = semi
+	(; cache, grid, boundary_conditions, equations) = semi
 	(; div, backend) = cache
 	(; dx, dz, nx, nz) = grid
-	update_ghost_values!(cache, grid, boundary_conditions, backend)
+	update_ghost_values!(equations, cache, grid, boundary_conditions, backend)
 
 	@unpack tol, maxiter = matrix_solver
 	u_new, exit_code, num_iters = bicgstab(
@@ -333,10 +346,10 @@ function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
 
 	# Since -Δ was solved (for positive definiteness) and physical equation has +Δ
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
-	update_ghost_values!(cache, grid, boundary_conditions, backend)
+	update_ghost_values!(equations, cache, grid, boundary_conditions, backend)
 end
 
-function project_pressure!(semi)
+function project_pressure!(semi, backend::MyCPU)
 
     (; cache, grid) = semi
     (; u, div, normatrix) = cache
@@ -349,6 +362,21 @@ function project_pressure!(semi)
         end
     end
 
+end
+
+function project_pressure!(semi, backend::Union{CPU, GPU})
+
+    (; cache, grid) = semi
+    (; u) = cache
+    (; dx, dz, nx, nz) = grid
+
+	project_pressure_kernel(backend)(u, dx, dz, ndrange = (nx, nz))
+end
+
+@kernel function project_pressure_kernel(u, dx, dz)
+	i, k = @index(Global, NTuple)
+	u[1, i, k] = u[1, i, k] - (u[3, i, k] - u[3, i-1, k]) / dx
+	u[2, i, k] = u[2, i, k] - (u[3, i, k] - u[3, i, k-1]) / dz
 end
 
 function compute_error(semi, t)

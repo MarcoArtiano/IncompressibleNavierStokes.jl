@@ -32,6 +32,8 @@ function solve(ode::ODE, dt; maxiters = nothing, analysis_interval = 1000)
 
     l1, l2, linf = compute_error(semi, t)
 
-    sol = (; cache.u, semi, l1, l2, linf)
+    sol = (; cache.u, semi,
+           l1, l2, linf
+           )
     return sol
 end

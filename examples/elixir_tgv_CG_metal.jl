@@ -2,7 +2,7 @@ using IncompressibleNavierStokes
 using Metal
 using KernelAbstractions
 
-RealT = Float64
+RealT = Float32
 
 gamma, rho = map(RealT, (1.4, 1.0))
 
@@ -30,10 +30,10 @@ semi = SemiDiscretization(grid, equations, surface_flux, initial_condition_tgv;
                           backend = CPU()
                           )
 
-dt =  6e-4
+dt =  map(RealT, 6e-4)
 
-tspan = (0.0, 11.0)
+tspan = map(RealT, (0.0, 11.0))
 
-ode = ODE(semi, tspan)
+ode = ODE(semi, tspan);
 
 sol = solve(ode, dt);
