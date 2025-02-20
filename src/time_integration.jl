@@ -20,17 +20,17 @@ function solve(ode::ODE, dt; maxiters = nothing, analysis_interval = 1000)
         end
 
        update_solution!(semi, dt)
-       l1, l2, linf = compute_error(semi, t)
+    #    l1, l2, linf = compute_error(semi, t)
 
        t += dt; it += 1
 
        if it % analysis_interval == 0
         @show t, dt, it
-        @show l1, l2, linf
+        # @show l1, l2, linf
        end
     end
 
-    l1, l2, linf = compute_error(semi, t)
+    # l1, l2, linf = compute_error(semi, t)
 
     sol = (; cache.u, semi,
            l1, l2, linf
