@@ -7,7 +7,7 @@ using IncompressibleNavierStokes: examples_dir
     tspan = (0.0, 12.0)
     nx = nz = 6
     trixi_include("$(examples_dir())/elixir_tgv_SOR.jl", tspan = tspan, nz = nz, nx = nx,
-                  matrix_solver = SORSolver(maxiter = 1000, tol = 1e-12, om = 1.6))
+                  matrix_solver = SORSolver(maxiter = 1000, tol = 1e-14, om = 1.6))
     @test isapprox(sol.l1, 4.2136403258919313e-10, atol = 1e-10, rtol = 1e-10)
     @test isapprox(sol.l2, 2.554269898215263e-10, atol = 1e-10, rtol = 1e-10)
     @test isapprox(sol.linf, 2.4286713387346114e-10, atol = 1e-10, rtol = 1e-10)
