@@ -35,6 +35,9 @@ struct PeriodicBC <: AbstractBoundaryCondition end
 Struct containing the left and right boundary conditions.
 """
 
+# Used to run code without KernelAbstractions.jl
+struct MyCPU end
+
 struct BoundaryConditions{LeftBC, RightBC, BottomBC, TopBC}
     left::LeftBC
     right::RightBC
