@@ -67,7 +67,7 @@ function create_cache(equations, grid::CartesianGrid2D, initial_condition, backe
 
     normatrix = zeros(RealT, nx, nz)
 
-    cache = (; u, du, fu, div, normatrix)
+    cache = (; u, du, fu, div, normatrix, backend)
 
     return cache
 end
