@@ -17,7 +17,8 @@ nz = 29
 domain = (0.0, 2.0, 0.0, 2.0)
 grid = IncompressibleNavierStokes.mesh(domain, nx, nz)
 surface_flux = flux_div
-semi = SemiDiscretization(grid, equations, surface_flux, initial_condition_tgv)
+semi = SemiDiscretization(grid, equations, surface_flux, initial_condition_tgv;
+                          matrix_solver = CGSolver(maxiter = 1000, tol = 1e-12))
 
 dt =  6e-4
 

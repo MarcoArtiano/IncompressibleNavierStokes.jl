@@ -1,4 +1,5 @@
 import Trixi: get_node_vars
+using ConjugateGradientsGPU
 
 function update_solution!(semi, dt)
 	(; cache, boundary_conditions, grid) = semi
@@ -97,7 +98,7 @@ end
 function apply_correction!(semi)
 
     compute_div!(semi)
-    compute_pressure!(semi)
+    compute_pressure!(semi, semi.matrix_solver)
     project_pressure!(semi)
 
 end
@@ -116,7 +117,7 @@ function compute_div!(semi)
 
 end
 
-function compute_pressure!(semi; max_sor_iter = 1000)
+function compute_pressure!(semi, matrix_solver::SORSolver; max_sor_iter = 1000)
     # TODO: Move into a struct:
     tol = 1e-14
     normres = 1
@@ -149,6 +150,56 @@ function compute_pressure!(semi; max_sor_iter = 1000)
         end
         normres = maximum(normatrix)
     end
+end
+
+function laplace_2d!(x, u, nx, nz, dx, dz)
+	x_mat = reshape(x, nx, nz)
+	u_mat = reshape(u, nx, nz)
+
+	for i = 1:nx
+		im1 = (i == 1)  ? nx : i - 1  # Wrap around for periodic BC
+		ip1 = (i == nx) ? 1  : i + 1  # Wrap around for periodic BC
+
+		for k = 1:nz
+			km1 = (k == 1)  ? nz : k - 1  # Wrap around for periodic BC
+			kp1 = (k == nz) ? 1  : k + 1  # Wrap around for periodic BC
+
+			x_mat[i, k]  = (u_mat[ip1, k] - 2.0f0 * u_mat[i, k] + u_mat[im1, k]) / dx^2  # x direction
+			x_mat[i, k] += (u_mat[i, km1] - 2.0f0 * u_mat[i, k] + u_mat[i, kp1]) / dz^2  # z direction
+		end
+	end
+
+	x .*= -1.0
+end
+
+function compute_pressure!(semi, matrix_solver::CGSolver)
+	(; cache, grid, boundary_conditions) = semi
+	(; div) = cache
+	(;dx, dz, nx, nz) = grid
+	update_ghost_values!(cache, grid, boundary_conditions)
+
+	@unpack tol, maxiter = matrix_solver
+	u_new, exit_code, num_iters = cg(
+		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
+		maxIter = maxiter)
+
+	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
+	update_ghost_values!(cache, grid, boundary_conditions)
+end
+
+function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
+	(; cache, grid, boundary_conditions) = semi
+	(; div) = cache
+	(;dx, dz, nx, nz) = grid
+	update_ghost_values!(cache, grid, boundary_conditions)
+
+	@unpack tol, maxiter = matrix_solver
+	u_new, exit_code, num_iters = bicgstab(
+		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
+		maxIter = maxiter)
+
+	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
+	update_ghost_values!(cache, grid, boundary_conditions)
 end
 
 function project_pressure!(semi)
