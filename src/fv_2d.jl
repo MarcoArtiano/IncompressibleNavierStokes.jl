@@ -6,10 +6,10 @@ function update_solution!(semi, dt)
 	(; u, du) = cache
 	@. du = 0.0f0
 	update_ghost_values!(cache, grid, boundary_conditions)
-	compute_surface_fluxes!(semi)
-	update_rhs!(semi)
-	@. u -= dt * du
-    apply_correction!(semi)
+	compute_surface_fluxes!(semi) # Approximations of flux without pressure
+	update_rhs!(semi) # Compute RHS without pressure term
+	@. u -= dt * du # Evolve solution without pressure term
+    apply_correction!(semi) # Include pressure term correction
 
 end
 
@@ -97,9 +97,9 @@ end
 
 function apply_correction!(semi)
 
-    compute_div!(semi)
-    compute_pressure!(semi, semi.matrix_solver)
-    project_pressure!(semi)
+    compute_div!(semi) # Divergence of the velocity field evolved without pressure term
+    compute_pressure!(semi, semi.matrix_solver) # Solve for pressure as Δp = div(u)
+    project_pressure!(semi) # Include the pressure term derivative in the evolution
 
 end
 
@@ -192,7 +192,7 @@ end
 function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
 	(; cache, grid, boundary_conditions) = semi
 	(; div) = cache
-	(;dx, dz, nx, nz) = grid
+	(; dx, dz, nx, nz) = grid
 	update_ghost_values!(cache, grid, boundary_conditions)
 
 	@unpack tol, maxiter = matrix_solver
