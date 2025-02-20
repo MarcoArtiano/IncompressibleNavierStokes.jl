@@ -5,7 +5,7 @@ function update_solution!(semi, dt)
 	(; cache, boundary_conditions, grid) = semi
 	(; u, du) = cache
 	@. du = 0.0f0
-	update_ghost_values!(cache.u, grid, boundary_conditions)
+	update_ghost_values!(cache, grid, boundary_conditions)
 	compute_surface_fluxes!(semi)
 	update_rhs!(semi)
 	@. u -= dt * du
@@ -13,28 +13,32 @@ function update_solution!(semi, dt)
 
 end
 
-function update_ghost_values!(u, grid::CartesianGrid2D, boundary_conditions::BoundaryConditions)
+function update_ghost_values!(cache, grid::CartesianGrid2D, boundary_conditions::BoundaryConditions)
 
-	apply_left_bc!(u, boundary_conditions.left, grid.nx)
-	apply_right_bc!(u, boundary_conditions.right, grid.nx)
-	apply_bottom_bc!(u, boundary_conditions.bottom, grid.nz)
-	apply_top_bc!(u, boundary_conditions.top, grid.nz)
+	apply_left_bc!(cache, boundary_conditions.left, grid.nx)
+	apply_right_bc!(cache, boundary_conditions.right, grid.nx)
+	apply_bottom_bc!(cache, boundary_conditions.bottom, grid.nz)
+	apply_top_bc!(cache, boundary_conditions.top, grid.nz)
 
 end
 
-function apply_right_bc!(u, right::PeriodicBC, nx)
+function apply_right_bc!(cache, right::PeriodicBC, nx)
+	(; u) = cache
 	u[:, nx+1, :] .= @views u[:, 1, :]
 end
 
-function apply_left_bc!(u, left::PeriodicBC, nx)
+function apply_left_bc!(cache, left::PeriodicBC, nx)
+	(; u) = cache
 	u[:, 0, :] .= @views u[:, nx, :]
 end
 
-function apply_bottom_bc!(u, bottom::PeriodicBC, nz)
+function apply_bottom_bc!(cache, bottom::PeriodicBC, nz)
+	(; u) = cache
 	u[:, :, 0] .= @views u[:, :, nz]
 end
 
-function apply_top_bc!(u, top::PeriodicBC, nz)
+function apply_top_bc!(cache, top::PeriodicBC, nz)
+	(; u) = cache
 	u[:, :, nz+1] .= @views u[:, :, 1]
 end
 
@@ -113,26 +117,6 @@ function compute_div!(semi)
 
 end
 
-function laplace_2d!(x, u, nx, nz, dx, dz)
-	x_mat = reshape(x, nx, nz)
-	u_mat = reshape(u, nx, nz)
-
-	for i = 1:nx
-		im1 = (i == 1)  ? nx : i - 1  # Wrap around for periodic BC
-		ip1 = (i == nx) ? 1  : i + 1  # Wrap around for periodic BC
-
-		for k = 1:nz
-			km1 = (k == 1)  ? nz : k - 1  # Wrap around for periodic BC
-			kp1 = (k == nz) ? 1  : k + 1  # Wrap around for periodic BC
-
-			x_mat[i, k]  = (u_mat[ip1, k] - 2.0f0 * u_mat[i, k] + u_mat[im1, k]) / dx^2  # x direction
-			x_mat[i, k] += (u_mat[i, km1] - 2.0f0 * u_mat[i, k] + u_mat[i, kp1]) / dz^2  # z direction
-		end
-	end
-
-	x .*= -1.0
-end
-
 function compute_pressure!(semi, matrix_solver::SORSolver; max_sor_iter = 1000)
     # TODO: Move into a struct:
     tol = 1e-14
@@ -156,7 +140,7 @@ function compute_pressure!(semi, matrix_solver::SORSolver; max_sor_iter = 1000)
             end
         end
         # This is not efficient
-	    update_ghost_values!(cache.u, grid, boundary_conditions)
+	    update_ghost_values!(cache, grid, boundary_conditions)
 
         # This is not efficient
         for i = 1:nx
@@ -168,12 +152,31 @@ function compute_pressure!(semi, matrix_solver::SORSolver; max_sor_iter = 1000)
     end
 end
 
+function laplace_2d!(x, u, nx, nz, dx, dz)
+	x_mat = reshape(x, nx, nz)
+	u_mat = reshape(u, nx, nz)
+
+	for i = 1:nx
+		im1 = (i == 1)  ? nx : i - 1  # Wrap around for periodic BC
+		ip1 = (i == nx) ? 1  : i + 1  # Wrap around for periodic BC
+
+		for k = 1:nz
+			km1 = (k == 1)  ? nz : k - 1  # Wrap around for periodic BC
+			kp1 = (k == nz) ? 1  : k + 1  # Wrap around for periodic BC
+
+			x_mat[i, k]  = (u_mat[ip1, k] - 2.0f0 * u_mat[i, k] + u_mat[im1, k]) / dx^2  # x direction
+			x_mat[i, k] += (u_mat[i, km1] - 2.0f0 * u_mat[i, k] + u_mat[i, kp1]) / dz^2  # z direction
+		end
+	end
+
+	x .*= -1.0
+end
+
 function compute_pressure!(semi, matrix_solver::CGSolver)
 	(; cache, grid, boundary_conditions) = semi
 	(; div) = cache
 	(;dx, dz, nx, nz) = grid
-	update_ghost_values!(cache.u, grid, boundary_conditions)
-	# @assert false div, cache.u[3,1:nx,1:nz]
+	update_ghost_values!(cache, grid, boundary_conditions)
 
 	@unpack tol, maxiter = matrix_solver
 	u_new, exit_code, num_iters = cg(
@@ -181,14 +184,14 @@ function compute_pressure!(semi, matrix_solver::CGSolver)
 		maxIter = maxiter)
 
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
-	update_ghost_values!(cache.u, grid, boundary_conditions)
+	update_ghost_values!(cache, grid, boundary_conditions)
 end
 
 function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
 	(; cache, grid, boundary_conditions) = semi
 	(; div) = cache
 	(;dx, dz, nx, nz) = grid
-	update_ghost_values!(cache.u, grid, boundary_conditions)
+	update_ghost_values!(cache, grid, boundary_conditions)
 
 	@unpack tol, maxiter = matrix_solver
 	u_new, exit_code, num_iters = bicgstab(
@@ -196,7 +199,7 @@ function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
 		maxIter = maxiter)
 
 	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
-	update_ghost_values!(cache.u, grid, boundary_conditions)
+	update_ghost_values!(cache, grid, boundary_conditions)
 end
 
 function project_pressure!(semi)

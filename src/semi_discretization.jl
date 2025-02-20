@@ -25,8 +25,9 @@ are used by default.
 """
 function SemiDiscretization(grid, equations, surface_flux, initial_condition;
     solver = FiniteVolumeSolver(),
-    boundary_conditions = BoundaryConditions(PeriodicBC(), PeriodicBC(), PeriodicBC(), PeriodicBC()), matrix_solver = SORSolver(),
-    cache = (;))
+    boundary_conditions = BoundaryConditions(PeriodicBC(), PeriodicBC(), PeriodicBC(),
+                                             PeriodicBC()),
+    matrix_solver = SORSolver(), cache = (;))
 
     cache = (;cache..., create_cache(equations, grid, initial_condition)...)
 
