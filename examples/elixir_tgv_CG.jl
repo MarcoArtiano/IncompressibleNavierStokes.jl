@@ -19,11 +19,11 @@ end
 nx = 29
 nz = 29
 domain = map(RealT, (0.0, 2.0, 0.0, 2.0))
-grid = IncompressibleNavierStokes.mesh(domain, nx, nz, backend = MyCPU())
+grid = IncompressibleNavierStokes.mesh(domain, nx, nz, backend = CPU());
 surface_flux = flux_div
 semi = SemiDiscretization(grid, equations, surface_flux, initial_condition_tgv;
                           matrix_solver = CGSolver(maxiter = 1000, tol = map(RealT, 1e-12)),
-                          backend = CPU())
+                          backend = CPU());
 
 dt =  map(RealT, 6e-4)
 

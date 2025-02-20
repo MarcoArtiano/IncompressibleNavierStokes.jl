@@ -6,8 +6,8 @@ function update_solution!(semi, dt)
 	(; u, du, backend) = cache
 	@. du = 0.0f0
 	update_ghost_values!(cache, grid, boundary_conditions, backend)
-	compute_surface_fluxes!(semi) # Approximations of flux without pressure
-	update_rhs!(semi) # Compute RHS without pressure term
+	compute_surface_fluxes!(semi, backend) # Approximations of flux without pressure
+	update_rhs!(semi, backend) # Compute RHS without pressure term
 	@. u -= dt * du # Evolve solution without pressure term
     apply_correction!(semi) # Include pressure term correction
 
@@ -87,8 +87,14 @@ end
     SVector(ntuple(@inline(v->u[v, indices...]), N))
 end
 
+@inline function set_node_vars!(u, v, ::Val{N}, indices...) where {N}
+	for i in 1:N
+		u[i, indices...] = v[i]
+	end
+end
 
-function compute_surface_fluxes!(semi)
+
+function compute_surface_fluxes!(semi, backend::MyCPU)
 	(; grid, equations, surface_flux, cache) = semi
 	(; nx, nz) = grid
 	(; u, fu) = cache
@@ -109,10 +115,32 @@ function compute_surface_fluxes!(semi)
 
 		end
 	end
-
 end
 
-function update_rhs!(semi)
+function compute_surface_fluxes!(semi, backend::Union{CPU, GPU})
+	(; grid, equations, surface_flux, cache) = semi
+	(; nx, nz) = grid
+	(; u, fu) = cache
+
+	nvar = Val(nvariables(equations))
+	compute_surface_flux_kernel(backend)(u, fu, surface_flux, nvar, equations,
+										 ndrange = (nx+1, nz+1))
+end
+
+@kernel function compute_surface_flux_kernel(u, fu, surface_flux, nvar, equations)
+	i, k = @index(Global, NTuple)
+
+	u_rr = get_node_vars(u, nvar, i, k)
+	u_ll = get_node_vars(u, nvar, i-1, k)
+	u_dd = get_node_vars(u, nvar, i, k-1)
+
+	flux_x = surface_flux(u_ll, u_rr, u_dd, 1, equations)
+	flux_z = surface_flux(u_dd, u_rr, u_ll, 2, equations)
+	set_node_vars!(fu, flux_x, nvar, i, k, 1)
+	set_node_vars!(fu, flux_z, nvar, i, k, 2)
+end
+
+function update_rhs!(semi, backend::MyCPU)
 	(; cache, grid, equations) = semi
 
 	(; nx, nz, dx, dz) = grid
@@ -134,17 +162,41 @@ function update_rhs!(semi)
 
 end
 
+function update_rhs!(semi, backend::Union{CPU, GPU})
+	(; cache, grid, equations) = semi
+
+	(; nx, nz, dx, dz) = grid
+	(; fu, du) = cache
+	nvar = Val(nvariables(equations))
+	update_rhs_kernel!(backend)(fu, du, dx, dz, nvar, ndrange = (nx, nz))
+
+end
+
+@kernel function update_rhs_kernel!(fu, du, dx, dz, nvar)
+	i, k = @index(Global, NTuple)
+
+	orientation = 1
+	fn_rr = get_node_vars(fu, nvar, i+1, k, orientation)
+	fn_ll = get_node_vars(fu, nvar, i, k, orientation)
+
+	orientation = 2
+	gn_rr = get_node_vars(fu, nvar, i, k+1, orientation)
+	gn_ll = get_node_vars(fu, nvar, i, k, orientation)
+	rhs = (fn_rr - fn_ll) / dx + (gn_rr - gn_ll) / dz
+	set_node_vars!(du, rhs, nvar, i, k)
+end
+
 # TODO: to add a struct for Poisson solver: div flux, p flux, poisson parameters
 
 function apply_correction!(semi)
-
-    compute_div!(semi) # Divergence of the velocity field evolved without pressure term
+	(; backend) = semi.cache
+    compute_div!(semi, backend) # Divergence of the velocity field evolved without pressure term
     compute_pressure!(semi, semi.matrix_solver) # Solve for pressure as Δp = div(u)
     project_pressure!(semi) # Include the pressure term derivative in the evolution
 
 end
 
-function compute_div!(semi)
+function compute_div!(semi, backend::MyCPU)
 
     (; cache, grid) = semi
     (; u, div) = cache
@@ -156,6 +208,21 @@ function compute_div!(semi)
         end
     end
 
+end
+
+function compute_div!(semi, backend::Union{CPU, GPU})
+
+    (; cache, grid) = semi
+    (; u, div) = cache
+    (; nx,nz, dx, dz) = grid
+
+    compute_div_kernel(backend)(u, div, dx, dz, ndrange = (nx, nz))
+
+end
+
+@kernel function compute_div_kernel(u, div, dx, dz)
+	i, k = @index(Global, NTuple)
+	div[i, k] = (u[1, i+1, k] - u[1, i, k]) / dx + (u[2, i, k+1] - u[2, i, k]) / dz
 end
 
 function compute_pressure!(semi, matrix_solver::SORSolver)
