@@ -86,6 +86,6 @@ struct SORSolver{RealT <: Real} <: AbstractMatrixSolver
     om::RealT # Over relaxation paramter. The method is converging for 1 < om < 2
 end
 
-function SORSolver(; maxiter = 100, tol = 1e-6, om = 1.6)
+function SORSolver(; maxiter = 100, tol = 1.0f0e-6, om = 1.6f0)
     SORSolver(maxiter, tol, om)
 end

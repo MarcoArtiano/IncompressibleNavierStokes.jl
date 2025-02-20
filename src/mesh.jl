@@ -64,15 +64,15 @@ function mesh(domain::Tuple{<:Real, <:Real, <:Real, <:Real}, nx, nz; nbx = 1, nb
     # the velocities instead are staggered.
     # nbx and nbz are the number of ghost cells in the x and z direction
     ## Creating the cell centers
-    xc_ = LinRange(xmin + 0.5f0*dx - nbx*dx, xmax - 0.5f0*dx + nbx*dx, nx + 2*nbx)
-    zc_ = LinRange(zmin + 0.5f0*dz - nbz*dz, zmax - 0.5f0*dz + nbz*dz, nz + 2*nbz)
+    xc_ = my_linrange(xmin + 0.5f0*dx - nbx*dx, xmax - 0.5f0*dx + nbx*dx, nx + 2*nbx, RealT, backend)
+    zc_ = my_linrange(zmin + 0.5f0*dz - nbz*dz, zmax - 0.5f0*dz + nbz*dz, nz + 2*nbz, RealT, backend)
 
     xc = OffsetArray(xc_, OffsetArrays.Origin(1-nbx))
     zc = OffsetArray(zc_, OffsetArrays.Origin(1-nbz))
 
     ## Creating the cell faces
-    xf_ = LinRange(xmin - nbx*dx, xmax + (nbx-1)*dx, nx + 2*nbx)
-    zf_ = LinRange(zmin - nbz*dz, zmax + (nbz-1)*dz, nz + 2*nbz)
+    xf_ = my_linrange(xmin - nbx*dx, xmax + (nbx-1)*dx, nx + 2*nbx, RealT, backend)
+    zf_ = my_linrange(zmin - nbz*dz, zmax + (nbz-1)*dz, nz + 2*nbz, RealT, backend)
 
     xf = OffsetArray(xf_, OffsetArrays.Origin(1-nbx))
     zf = OffsetArray(zf_, OffsetArrays.Origin(1-nbz))

@@ -23,4 +23,6 @@ export solve, ODE
 
 export SORSolver, CGSolver, BiCGSTABSolver
 
+export MyCPU
+
 end
