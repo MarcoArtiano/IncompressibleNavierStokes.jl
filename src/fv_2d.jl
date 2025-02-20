@@ -119,7 +119,7 @@ end
 
 function compute_pressure!(semi, matrix_solver::SORSolver)
     # TODO: Move into a struct:
-	@unpack tol, maxiter, om = matrix_solver
+    @unpack tol, maxiter, om = matrix_solver
     normres = 1
     (; cache, grid, boundary_conditions) = semi
     (; u, div, normatrix) = cache
@@ -127,7 +127,7 @@ function compute_pressure!(semi, matrix_solver::SORSolver)
     #add max iter
 	it = 0
     while normres > tol
-		if it > max_iter
+		if it > maxiter
 			println("Max iter reached")
 			break
 		end
