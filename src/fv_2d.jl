@@ -129,6 +129,8 @@ function laplace_2d!(x, u, nx, nz, dx, dz)
 			x_mat[i, k] += (u_mat[i, km1] - 2.0f0 * u_mat[i, k] + u_mat[i, kp1]) / dz^2  # z direction
 		end
 	end
+
+	x .*= -1.0
 end
 
 function compute_pressure!(semi, matrix_solver::SORSolver; max_sor_iter = 1000)
@@ -173,12 +175,12 @@ function compute_pressure!(semi, matrix_solver::CGSolver)
 	update_ghost_values!(cache.u, grid, boundary_conditions)
 	# @assert false div, cache.u[3,1:nx,1:nz]
 
-	@unpack tol, maxiter, demand_positivity = matrix_solver
+	@unpack tol, maxiter = matrix_solver
 	u_new, exit_code, num_iters = cg(
 		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
-		maxIter = maxiter, demand_positivity = demand_positivity)
+		maxIter = maxiter)
 
-	semi.cache.u[3,1:nx,1:nz] .= reshape(u_new, (nx, nz))
+	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
 	update_ghost_values!(cache.u, grid, boundary_conditions)
 end
 
@@ -193,7 +195,7 @@ function compute_pressure!(semi, matrix_solver::BiCGSTABSolver)
 		(x,u) -> laplace_2d!(x, u, nx, nz, dx, dz), vec(div[1:nx, 1:nz]), tol = tol,
 		maxIter = maxiter)
 
-	semi.cache.u[3,1:nx,1:nz] .= reshape(u_new, (nx, nz))
+	semi.cache.u[3,1:nx,1:nz] .= -reshape(u_new, (nx, nz))
 	update_ghost_values!(cache.u, grid, boundary_conditions)
 end
 

@@ -175,6 +175,8 @@ function laplace_2d!(x, u, nx, nz, dx, dz)
             x_mat[i, k] = lap_x + lap_z  # Combine results for both directions
         end
     end
+
+    x .*= -1.0
 end
 
 nx = nz = 10
