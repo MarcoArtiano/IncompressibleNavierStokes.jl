@@ -77,4 +77,12 @@ function BiCGSTABSolver(; maxiter = 100, tol = 1e-6)
     BiCGSTABSolver(maxiter, tol)
 end
 
-struct SORSolver <: AbstractMatrixSolver end
+struct SORSolver{RealT <: Real} <: AbstractMatrixSolver
+    maxiter::Int
+    tol::RealT
+    om::RealT # Over relaxation paramter. The method is converging for 1 < om < 2
+end
+
+function SORSolver(; maxiter = 100, tol = 1e-6, om = 1.6)
+    SORSolver(maxiter, tol, om)
+end

@@ -117,23 +117,22 @@ function compute_div!(semi)
 
 end
 
-function compute_pressure!(semi, matrix_solver::SORSolver; max_sor_iter = 1000)
+function compute_pressure!(semi, matrix_solver::SORSolver)
     # TODO: Move into a struct:
-    tol = 1e-14
+	@unpack tol, maxiter, om = matrix_solver
     normres = 1
-    om = 1.6
     (; cache, grid, boundary_conditions) = semi
     (; u, div, normatrix) = cache
     (; dx, dz, nx, nz) = grid
     #add max iter
 	it = 0
     while normres > tol
-		if it > max_sor_iter
+		if it > max_iter
 			println("Max iter reached")
 			break
 		end
 		it += 1
-        # That doesn't not support non-uniform mesh.
+        # That doesn't support non-uniform mesh.
         for i = 1:nx
             for k = 1:nz
             u[3,i,k] = u[3,i,k] + om*0.25*(u[3,i+1,k] -2*u[3,i,k]+ u[3,i-1,k] + u[3,i,k-1] + u[3,i,k+1] - 2*u[3,i,k] -dx*dz*div[i,k])
