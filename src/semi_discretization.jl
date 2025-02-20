@@ -67,7 +67,10 @@ function create_cache(equations, grid::CartesianGrid2D, initial_condition, backe
 
     normatrix = zeros(RealT, nx, nz)
 
-    cache = (; u, du, fu, div, normatrix, backend)
+    exact_array = KernelAbstractions.zeros(backend, RealT, nx, nz)
+    error_array = KernelAbstractions.zeros(backend, RealT, nx, nz)
+
+    cache = (; u, du, fu, div, normatrix, exact_array, error_array, backend)
 
     return cache
 end

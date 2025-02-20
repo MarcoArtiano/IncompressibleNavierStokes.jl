@@ -242,7 +242,7 @@ function compute_pressure!(semi, matrix_solver::SORSolver)
     # TODO: Move into a struct:
     @unpack tol, maxiter, om = matrix_solver
     normres = 1
-    (; cache, grid, boundary_conditions) = semi
+    (; cache, grid, boundary_conditions, equations) = semi
     (; u, div, normatrix, backend) = cache
     (; dx, dz, nx, nz) = grid
     #add max iter
@@ -379,7 +379,7 @@ end
 	u[2, i, k] = u[2, i, k] - (u[3, i, k] - u[3, i, k-1]) / dz
 end
 
-function compute_error(semi, t)
+function compute_error(semi, t, backend::MyCPU)
 	(; cache, grid, equations, initial_condition) = semi
 	(; u) = cache
 	(; nx, nz, dx, dz) = grid
@@ -397,4 +397,31 @@ function compute_error(semi, t)
 	end
 	l2 = sqrt(l2)
 	return l1, l2, linf
+end
+
+function compute_error(semi, t, backend::Union{CPU, GPU})
+	(; cache, grid, equations, initial_condition) = semi
+	(; u) = cache
+	(; nx, nz, dx, dz) = grid
+	(; xc, zc, xf, zf) = grid
+	nvar = Val(nvariables(equations))
+
+	compute_error_kernel!(backend)(cache.error_array, initial_condition,
+								   u, xc, zc, xf, zf, t,
+								   equations, ndrange = (nx, nz))
+
+	l1 = sum(cache.error_array) * dx * dz
+	l2 = sqrt(sum(cache.error_array.^2) * dx * dz)
+	linf = maximum(cache.error_array)
+	return l1, l2, linf
+end
+
+@kernel function compute_error_kernel!(error_array,
+									   initial_condition, u, xc, zc, xf, zf, t, equations)
+	i, k = @index(Global, NTuple)
+	nvar = Val(nvariables(equations))
+	exact = initial_condition((xc[i], zc[k]), (xf[i], zf[k]), t, equations)
+	u_node = get_node_vars(u, nvar, i, k)
+	error = abs(u_node[1] - exact[1]) + abs(u_node[2] - exact[2])
+	error_array[i, k] = error
 end

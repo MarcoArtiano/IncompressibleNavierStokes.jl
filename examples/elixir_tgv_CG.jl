@@ -1,4 +1,5 @@
 using IncompressibleNavierStokes
+using KernelAbstractions
 
 RealT = Float64
 

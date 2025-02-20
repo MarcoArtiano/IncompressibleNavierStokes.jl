@@ -2,6 +2,7 @@ using Test
 using TrixiBase
 using IncompressibleNavierStokes
 using IncompressibleNavierStokes: examples_dir
+using KernelAbstractions
 
 @testset "TGV test" begin
     tspan = (0.0, 12.0)
