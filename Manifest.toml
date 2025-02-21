@@ -233,7 +233,7 @@ version = "0.2.3"
 
 [[deps.ConjugateGradientsGPU]]
 deps = ["GPUArraysCore", "KernelAbstractions", "LinearAlgebra"]
-git-tree-sha1 = "7daba0209c95235eec9516c6cb1933eb73f68b3d"
+git-tree-sha1 = "5bfc0b8dacff6bd404282e02947ef1481dbd77ec"
 repo-rev = "master"
 repo-url = "https://github.com/Arpit-Babbar/ConjugateGradientsGPU.jl"
 uuid = "0cf172c8-095c-46f4-9dd2-d60831738d9b"
@@ -1272,9 +1272,9 @@ version = "0.5.75"
 
 [[deps.SymbolicIndexingInterface]]
 deps = ["Accessors", "ArrayInterface", "RuntimeGeneratedFunctions", "StaticArraysCore"]
-git-tree-sha1 = "fd2d4f0499f6bb4a0d9f5030f5c7d61eed385e03"
+git-tree-sha1 = "d6c04e26aa1c8f7d144e1a8c47f1c73d3013e289"
 uuid = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
-version = "0.3.37"
+version = "0.3.38"
 
 [[deps.T8code]]
 deps = ["CEnum", "Libdl", "MPI", "MPIPreferences", "Preferences", "Reexport", "UUIDs", "t8code_jll"]
@@ -1357,9 +1357,9 @@ version = "0.1.2"
 
 [[deps.Trixi]]
 deps = ["Accessors", "CodeTracking", "ConstructionBase", "DataStructures", "DelimitedFiles", "DiffEqBase", "DiffEqCallbacks", "Downloads", "EllipsisNotation", "FillArrays", "ForwardDiff", "HDF5", "LinearAlgebra", "LinearMaps", "LoopVectorization", "MPI", "MuladdMacro", "Octavian", "OffsetArrays", "P4est", "Polyester", "PrecompileTools", "Preferences", "Printf", "RecipesBase", "RecursiveArrayTools", "Reexport", "Requires", "SciMLBase", "SimpleUnPack", "SparseArrays", "StableRNGs", "StartUpDG", "Static", "StaticArrayInterface", "StaticArrays", "StrideArrays", "StructArrays", "SummationByPartsOperators", "T8code", "TimerOutputs", "Triangulate", "TriplotBase", "TriplotRecipes", "TrixiBase", "UUIDs"]
-git-tree-sha1 = "ea28e43dc625c961a112c7e72d981763a1fe5c4a"
+git-tree-sha1 = "b8b4af61d430f64a4f007e653d9262b9f3acbb8e"
 uuid = "a7f1ee26-1774-49b1-8366-f1abc58fbfcb"
-version = "0.10.2"
+version = "0.11.0"
 
     [deps.Trixi.extensions]
     TrixiConvexECOSExt = ["Convex", "ECOS"]
