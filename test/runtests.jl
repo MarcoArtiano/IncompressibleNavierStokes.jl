@@ -34,7 +34,6 @@ end
     @test isapprox(sol.linf, 5.405456589852789e-11, atol = 1e-9, rtol = 1e-9)
 end
 
-
 @testset "TGV test CG Float32" begin
     RealT = Float32
     tspan = map(RealT, (0.0, 12.0))
