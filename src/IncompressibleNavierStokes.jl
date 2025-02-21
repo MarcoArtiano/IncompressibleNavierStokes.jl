@@ -10,6 +10,7 @@ include("semi_discretization.jl")
 include("IncompressibleEuler2D.jl")
 include("time_integration.jl")
 include("fv_2d.jl")
+include("fv_2d_parallel.jl")
 
 examples_dir() = joinpath(dirname(pathof(IncompressibleNavierStokes)), "..", "examples")
 
