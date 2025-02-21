@@ -1,9 +1,11 @@
 using IncompressibleNavierStokes
+using Metal
 using KernelAbstractions
 
-RealT = Float64
+RealT = Float32
 
 gamma, rho = map(RealT, (1.4, 1.0))
+
 ## IncompressibleEuler2D(gamma, rho)
 equations = IncompressibleEuler2D(gamma, rho)
 
@@ -17,19 +19,21 @@ function initial_condition_tgv(x, xf, t, equations::IncompressibleEuler2D)
     return SVector(u, w, p)
 end
 
-nx = 29
-nz = 29
+nx = 20
+nz = 20
 domain = map(RealT, (0.0, 2.0, 0.0, 2.0))
-grid = IncompressibleNavierStokes.mesh(domain, nx, nz, backend = CPU());
+grid = IncompressibleNavierStokes.mesh(domain, nx, nz, backend = MetalBackend());
 surface_flux = flux_div
 semi = SemiDiscretization(grid, equations, surface_flux, initial_condition_tgv;
-                          matrix_solver = CGSolver(maxiter = 1000, tol = map(RealT, 1e-12)),
-                          backend = CPU());
+                          matrix_solver = BiCGSTABSolver(maxiter = 100, tol = map(RealT, 1e-4)),
+                        #   matrix_solver = CGSolver(maxiter = 1000, tol = map(RealT, 0.5e-5)),
+                          backend = MetalBackend()
+                          )
 
 dt =  map(RealT, 6e-4)
 
-tspan = map(RealT, (0.0, 12.0))
+tspan = map(RealT, (0.0, 11.0))
 
-ode = ODE(semi, tspan)
+ode = ODE(semi, tspan);
 
-sol = solve(ode, dt);
+sol = solve(ode, dt, analysis_interval = 100);
