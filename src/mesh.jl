@@ -71,8 +71,8 @@ function mesh(domain::Tuple{<:Real, <:Real, <:Real, <:Real}, nx, nz; nbx = 1, nb
     zc = OffsetArray(zc_, OffsetArrays.Origin(1-nbz))
 
     ## Creating the cell faces
-    xf_ = LinRange(xmin - nbx*dx, xmax + (nbx-1)*dx, nx + 2*nbx)
-    zf_ = LinRange(zmin - nbz*dz, zmax + (nbz-1)*dz, nz + 2*nbz)
+    xf_ = LinRange(xmin - nbx*dx, xmax + (nbx-1)*dx, nx + 1 + 2*nbx)
+    zf_ = LinRange(zmin - nbz*dz, zmax + (nbz-1)*dz, nz + 1 + 2*nbz)
 
     xf = OffsetArray(xf_, OffsetArrays.Origin(1-nbx))
     zf = OffsetArray(zf_, OffsetArrays.Origin(1-nbz))
